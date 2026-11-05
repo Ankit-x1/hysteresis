@@ -1,0 +1,64 @@
+name: ci
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+env:
+  # Keep this pinned to the exact engine version used by the fidelity suite.
+  PROM_VERSION: v3.15.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+      - name: Build wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+
+  fidelity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Simulator vs pinned Prometheus engine
+        run: python tools/promtool_fidelity.py --trials 200 --docker prom/prometheus:${PROM_VERSION}
+
+  rule-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: hysteresis bench --out bench/ci.npz --seed 0 --days 14
+      - name: Check rules against the benchmark
+        run: |
+          hysteresis check examples/rules.yml --bench bench/ci.npz --alert HighCPUTypical \
+            --max-missed 2 --max-extra-episodes 10 | tee -a "$GITHUB_STEP_SUMMARY"
+
+  harness-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local stack configuration
+        run: |
+          cp harness/.env.example harness/.env
+          cd harness
+          docker compose config --quiet
