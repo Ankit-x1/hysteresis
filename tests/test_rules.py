@@ -63,7 +63,7 @@ def test_unsupported_expression_is_explicit(tmp_path):
 def test_label_matchers_and_compound_promql_are_rejected(tmp_path):
     path = tmp_path / "rules.yml"
     path.write_text(
-        'groups:\n- name: g\n  rules:\n  - alert: A\n    expr: \'cpu_usage{job="api"} > 3\'\n'
+        "groups:\n- name: g\n  rules:\n  - alert: A\n    expr: 'cpu_usage{job=\"api\"} > 3'\n"
     )
     assert load_rules(path, 15)[0].rule is None
 

@@ -56,9 +56,7 @@ class Bench:
             ):
                 raise ValueError(f"incident {index} boundaries must be integers")
             if not (0 <= incident.start < incident.end <= values.size):
-                raise ValueError(
-                    f"incident {index} must satisfy 0 <= start < end <= {values.size}"
-                )
+                raise ValueError(f"incident {index} must satisfy 0 <= start < end <= {values.size}")
             if index and incident.start < previous_end:
                 raise ValueError("incident windows must be sorted and non-overlapping")
             previous_end = incident.end
@@ -76,9 +74,7 @@ class Bench:
         if not (0 <= a <= b <= len(self.values)):
             raise ValueError("slice bounds must satisfy 0 <= start <= end <= sample count")
         inc = [
-            Incident(i.start - a, i.end - a)
-            for i in self.incidents
-            if i.start >= a and i.end <= b
+            Incident(i.start - a, i.end - a) for i in self.incidents if i.start >= a and i.end <= b
         ]
         return Bench(self.values[a:b].copy(), self.step_s, inc, self.seed, self.metric_name)
 
@@ -139,8 +135,7 @@ class Bench:
                         "benchmark incident start/end arrays must be matching integer vectors"
                     )
                 incidents = [
-                    Incident(int(start), int(end))
-                    for start, end in zip(starts, ends, strict=True)
+                    Incident(int(start), int(end)) for start, end in zip(starts, ends, strict=True)
                 ]
                 schema_version = (
                     int(np.asarray(data["schema_version"]).item())

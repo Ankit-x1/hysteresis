@@ -43,8 +43,10 @@ def main() -> int:
     wall_start = time.time()
     monotonic_start = time.monotonic()
     windows = [
-        {"start": wall_start + incident.start * bench.step_s,
-         "end": wall_start + incident.end * bench.step_s}
+        {
+            "start": wall_start + incident.start * bench.step_s,
+            "end": wall_start + incident.end * bench.step_s,
+        }
         for incident in bench.incidents
     ]
     label_path.write_text(

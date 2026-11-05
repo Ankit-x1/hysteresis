@@ -131,9 +131,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     for name in ("max_missed", "max_extra_episodes"):
         if getattr(args, name) < 0:
             raise EvaluationError(f"--{name.replace('_', '-')} must be non-negative")
-    if args.max_delay is not None and (
-        args.max_delay < 0 or not math.isfinite(args.max_delay)
-    ):
+    if args.max_delay is not None and (args.max_delay < 0 or not math.isfinite(args.max_delay)):
         raise EvaluationError("--max-delay must be finite and non-negative")
 
     bench = Bench.load(args.bench)
@@ -152,9 +150,7 @@ def cmd_check(args: argparse.Namespace) -> int:
             if result.mean_delay_s is None and result.incidents:
                 problems.append("no incidents were detected; mean detection delay is undefined")
             elif result.mean_delay_s is not None and result.mean_delay_s > args.max_delay:
-                problems.append(
-                    f"mean delay {result.mean_delay_s:.0f}s > {args.max_delay:.0f}s"
-                )
+                problems.append(f"mean delay {result.mean_delay_s:.0f}s > {args.max_delay:.0f}s")
         status = "FAIL: " + "; ".join(problems) if problems else "PASS"
         print(f"### {parsed.alert}: {status}\n\n{table([('As written', result)])}")
         failed = failed or bool(problems)

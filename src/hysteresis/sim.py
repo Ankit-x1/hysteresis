@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-
 import numpy as np
 
 NORMAL, PENDING, FIRING, RECOVERING = 0, 1, 2, 3

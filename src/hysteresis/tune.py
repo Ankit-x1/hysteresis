@@ -90,9 +90,7 @@ def tune(
         )
         candidate_score, candidate_loss = evaluate(candidate)
         candidate_delay = (
-            candidate_score.mean_delay_s
-            if candidate_score.mean_delay_s is not None
-            else math.inf
+            candidate_score.mean_delay_s if candidate_score.mean_delay_s is not None else math.inf
         )
         best_delay = best_score.mean_delay_s if best_score.mean_delay_s is not None else math.inf
         candidate_key = (
