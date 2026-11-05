@@ -1,14 +1,13 @@
-"""Random-search tuner for pending / keep-firing / recovery-threshold settings.
+"""Seeded random-search tuner for pending, keep-firing and recovery settings.
 
-Plain seeded random search: four numbers per rule do not justify gradients.
-The user's current rule is always candidate #0, so the result is never worse
-than the starting point on the data it was tuned on. Always report results on
-held-out data (Bench.split), not on the data you tuned with.
+The current rule is always candidate #0, so the result cannot be worse on the
+training data. Always use a chronological held-out set for reported results.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -30,9 +29,9 @@ class TuneResult:
 
 
 def loss_of(s: Score, max_delay_s: float, w_missed: float, w_extra: float, w_delay: float) -> float:
-    delay = s.mean_delay_s or 0.0
+    delay = s.mean_delay_s if s.mean_delay_s is not None else 0.0
     excess_min = max(0.0, delay - max_delay_s) / 60.0
-    return w_missed * s.missed + w_extra * s.extra_pages + w_delay * excess_min
+    return w_missed * s.missed + w_extra * s.extra_episodes + w_delay * excess_min
 
 
 def tune(
@@ -49,14 +48,32 @@ def tune(
     w_extra: float = 1.0,
     w_delay: float = 1.0,
 ) -> TuneResult:
+    if not isinstance(trials, int) or isinstance(trials, bool) or trials < 0:
+        raise ValueError("trials must be a non-negative integer")
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        raise ValueError("seed must be an integer")
+    for name, value in (
+        ("max_delay_s", max_delay_s),
+        ("max_pending_s", max_pending_s),
+        ("max_keep_s", max_keep_s),
+        ("w_missed", w_missed),
+        ("w_extra", w_extra),
+        ("w_delay", w_delay),
+    ):
+        if not math.isfinite(float(value)) or value < 0:
+            raise ValueError(f"{name} must be finite and non-negative")
+    if w_missed + w_extra + w_delay == 0:
+        raise ValueError("at least one tuning loss weight must be greater than zero")
+
     rng = np.random.default_rng(seed)
-    sd = float(np.std(bench.values))
+    finite_values = bench.values[np.isfinite(bench.values)]
+    sd = float(np.std(finite_values)) if finite_values.size else 0.0
     max_p = steps_for(max_pending_s, bench.step_s)
     max_k = steps_for(max_keep_s, bench.step_s)
 
-    def evaluate(r: Rule) -> tuple[Score, float]:
-        s = score(simulate(bench.values, r), bench)
-        return s, loss_of(s, max_delay_s, w_missed, w_extra, w_delay)
+    def evaluate(rule: Rule) -> tuple[Score, float]:
+        result = score(simulate(bench.values, rule), bench)
+        return result, loss_of(result, max_delay_s, w_missed, w_extra, w_delay)
 
     base_score, base_loss = evaluate(base)
     best, best_score, best_loss = base, base_score, base_loss
@@ -65,18 +82,26 @@ def tune(
         if allow_band:
             width = float(rng.uniform(0.0, 1.5 * sd))
             clear = base.threshold - width if base.direction == "above" else base.threshold + width
-        cand = dataclasses.replace(
+        candidate = dataclasses.replace(
             base,
             pending_steps=int(rng.integers(0, max_p + 1)),
             keep_firing_steps=int(rng.integers(0, max_k + 1)),
             clear_threshold=clear if allow_band else base.clear_threshold,
         )
-        s, l_ = evaluate(cand)
-        better = l_ < best_loss - 1e-12
-        # Equal loss: prefer lower delay, then the smaller (less intrusive) settings.
-        key = (s.mean_delay_s or 0.0, cand.pending_steps + cand.keep_firing_steps)
-        best_key = (best_score.mean_delay_s or 0.0, best.pending_steps + best.keep_firing_steps)
-        tie = abs(l_ - best_loss) <= 1e-12 and key < best_key
+        candidate_score, candidate_loss = evaluate(candidate)
+        candidate_delay = (
+            candidate_score.mean_delay_s
+            if candidate_score.mean_delay_s is not None
+            else math.inf
+        )
+        best_delay = best_score.mean_delay_s if best_score.mean_delay_s is not None else math.inf
+        candidate_key = (
+            candidate_delay,
+            candidate.pending_steps + candidate.keep_firing_steps,
+        )
+        best_key = (best_delay, best.pending_steps + best.keep_firing_steps)
+        better = candidate_loss < best_loss - 1e-12
+        tie = abs(candidate_loss - best_loss) <= 1e-12 and candidate_key < best_key
         if better or tie:
-            best, best_score, best_loss = cand, s, l_
+            best, best_score, best_loss = candidate, candidate_score, candidate_loss
     return TuneResult(best, best_score, best_loss, base_score, base_loss, trials + 1)
