@@ -9,3 +9,4 @@ dist/
 build/
 bench/*.json
 harness/.env
+docs

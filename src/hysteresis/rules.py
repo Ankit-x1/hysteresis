@@ -121,6 +121,7 @@ def load_rules(path: str | Path, step_s: float) -> list[ParsedRule]:
         raise ValueError("rule file 'groups' must be a list")
 
     out: list[ParsedRule] = []
+    seen_alerts: set[str] = set()
     for group_index, group in enumerate(groups):
         if not isinstance(group, dict):
             raise ValueError(f"group at index {group_index} must be a mapping")
@@ -137,6 +138,10 @@ def load_rules(path: str | Path, step_s: float) -> list[ParsedRule]:
             alert = raw_rule["alert"]
             if not isinstance(alert, str) or not alert.strip():
                 raise ValueError(f"alert name at index {rule_index} must be a non-empty string")
+            alert = alert.strip()
+            if alert in seen_alerts:
+                raise ValueError(f"duplicate alert name {alert!r} in rule file {path!s}")
+            seen_alerts.add(alert)
             expr_value = raw_rule.get("expr", "")
             if not isinstance(expr_value, str):
                 raise ValueError(f"expression for alert {alert!r} must be a string")

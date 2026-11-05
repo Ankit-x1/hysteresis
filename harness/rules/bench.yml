@@ -1,0 +1,9 @@
+groups:
+  - name: hysteresis-benchmark
+    rules:
+      - alert: BenchHigh
+        expr: cpu_usage > 70
+        for: 0s
+      - alert: BenchHighTypical
+        expr: cpu_usage > 70
+        for: 5m
