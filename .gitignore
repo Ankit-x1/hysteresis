@@ -10,3 +10,6 @@ build/
 bench/*.json
 harness/.env
 docs
+examples
+conftest.py
+CHANGELOG.md
