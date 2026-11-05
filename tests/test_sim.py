@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from hysteresis.sim import FIRING, NORMAL, PENDING, RECOVERING, Rule, episodes, simulate
-
+import itertools
 
 def test_pending_delays_firing():
     values = np.array([90, 90, 90, 90, 50])
@@ -90,5 +90,5 @@ def test_seeded_random_signals_preserve_state_and_episode_invariants():
         assert set(np.unique(states)).issubset(allowed)
         alert_episodes = episodes(states)
         assert all(start < end for start, end in alert_episodes)
-        assert all(left[1] <= right[0] for left, right in zip(alert_episodes, alert_episodes[1:]))
+        assert all(left[1] <= right[0] for left, right in itertools.pairwise(alert_episodes, alert_episodes[1:]))
         assert all(states[start] == FIRING for start, _ in alert_episodes)
