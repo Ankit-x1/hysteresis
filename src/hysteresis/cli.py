@@ -120,7 +120,7 @@ def cmd_tune(args: argparse.Namespace) -> int:
         ]
         print(
             f"### {parsed.alert}\n\n{table(rows)}\n"
-            f"Training loss: {result.base_loss:.3f} → {result.loss:.3f} "
+            f"Training loss: {result.base_loss:.3f} -> {result.loss:.3f} "
             f"({result.trials} candidates evaluated)\n\n"
             f"{suggestion(parsed.alert, result.rule, bench.step_s)}\n"
         )

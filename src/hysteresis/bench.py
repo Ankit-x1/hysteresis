@@ -7,9 +7,9 @@ being scored against the same array by accident.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
 import re
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -40,21 +40,27 @@ class Bench:
             raise ValueError("benchmark values may contain NaN for missing data, but not infinity")
         try:
             step_s = float(self.step_s)
-        except (TypeError, ValueError) as exc:
+        except TypeError as exc:
+            raise TypeError("step_s must be a number") from exc
+        except ValueError as exc:
             raise ValueError("step_s must be a finite number greater than zero") from exc
         if not math.isfinite(step_s) or step_s <= 0:
             raise ValueError("step_s must be a finite number greater than zero")
         if not isinstance(self.seed, (int, np.integer)) or isinstance(self.seed, bool):
-            raise ValueError("seed must be an integer")
-        if not isinstance(self.metric_name, str) or not _METRIC_NAME.fullmatch(self.metric_name):
+            raise TypeError("seed must be an integer")
+        if not isinstance(self.metric_name, str):
+            raise TypeError("metric_name must be a string")
+        if not _METRIC_NAME.fullmatch(self.metric_name):
             raise ValueError("metric_name must be a valid Prometheus metric name")
 
         previous_end = 0
         for index, incident in enumerate(self.incidents):
+            if not isinstance(incident, Incident):
+                raise TypeError(f"incident {index} must be an Incident")
             if not isinstance(incident.start, (int, np.integer)) or not isinstance(
                 incident.end, (int, np.integer)
             ):
-                raise ValueError(f"incident {index} boundaries must be integers")
+                raise TypeError(f"incident {index} boundaries must be integers")
             if not (0 <= incident.start < incident.end <= values.size):
                 raise ValueError(f"incident {index} must satisfy 0 <= start < end <= {values.size}")
             if index and incident.start < previous_end:
@@ -146,7 +152,7 @@ class Bench:
                     raise ValueError(f"unsupported benchmark schema version: {schema_version}")
                 seed_value = np.asarray(data["seed"]).item()
                 if not isinstance(seed_value, (int, np.integer)) or isinstance(seed_value, bool):
-                    raise ValueError("benchmark seed must be an integer")
+                    raise TypeError("benchmark seed must be an integer")
                 metric_name = (
                     str(np.asarray(data["metric_name"]).item())
                     if "metric_name" in data.files
@@ -181,7 +187,9 @@ def generate(
     metric_name: str = "cpu_usage",
 ) -> Bench:
     """Generate a seeded seasonal signal with autocorrelated noise and incidents."""
-    if not isinstance(metric_name, str) or not _METRIC_NAME.fullmatch(metric_name):
+    if not isinstance(metric_name, str):
+        raise TypeError("metric_name must be a string")
+    if not _METRIC_NAME.fullmatch(metric_name):
         raise ValueError("metric_name must be a valid Prometheus metric name")
     finite_values = {
         "days": days,
@@ -206,9 +214,11 @@ def generate(
     if incidents_per_day <= 0:
         raise ValueError("incidents_per_day must be greater than zero")
     if not isinstance(seed, (int, np.integer)) or isinstance(seed, bool):
-        raise ValueError("seed must be an integer")
+        raise TypeError("seed must be an integer")
     seed = int(seed)
-    if not isinstance(ramp_steps, int) or isinstance(ramp_steps, bool) or ramp_steps < 1:
+    if not isinstance(ramp_steps, int) or isinstance(ramp_steps, bool):
+        raise TypeError("ramp_steps must be an integer")
+    if ramp_steps < 1:
         raise ValueError("ramp_steps must be an integer greater than or equal to one")
     if len(shift_range) != 2 or not all(math.isfinite(float(v)) for v in shift_range):
         raise ValueError("shift_range must contain two finite numbers")

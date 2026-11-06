@@ -110,33 +110,36 @@ def load_rules(path: str | Path, step_s: float) -> list[ParsedRule]:
     if data is None:
         raise ValueError(f"rule file {path!s} is empty")
     if not isinstance(data, dict):
-        raise ValueError("rule file root must be a YAML mapping")
-    groups = data.get("groups")
-    if groups is None:
-        spec = data.get("spec") or {}
+        raise TypeError("rule file root must be a YAML mapping")
+    if "groups" in data:
+        groups = data["groups"]
+    else:
+        spec = data.get("spec", {})
         if not isinstance(spec, dict):
-            raise ValueError("Kubernetes PrometheusRule 'spec' must be a mapping")
+            raise TypeError("Kubernetes PrometheusRule 'spec' must be a mapping")
         groups = spec.get("groups", [])
     if not isinstance(groups, list):
-        raise ValueError("rule file 'groups' must be a list")
+        raise TypeError("rule file 'groups' must be a list")
 
     out: list[ParsedRule] = []
     seen_alerts: set[str] = set()
     for group_index, group in enumerate(groups):
         if not isinstance(group, dict):
-            raise ValueError(f"group at index {group_index} must be a mapping")
-        rules = group.get("rules", []) or []
+            raise TypeError(f"group at index {group_index} must be a mapping")
+        rules = group.get("rules", [])
         if not isinstance(rules, list):
-            raise ValueError(f"rules in group {group.get('name', group_index)!r} must be a list")
+            raise TypeError(f"rules in group {group.get('name', group_index)!r} must be a list")
         for rule_index, raw_rule in enumerate(rules):
             if not isinstance(raw_rule, dict):
-                raise ValueError(
+                raise TypeError(
                     f"rule at index {rule_index} in group {group_index} must be a mapping"
                 )
             if "alert" not in raw_rule:
                 continue  # Recording rule.
             alert = raw_rule["alert"]
-            if not isinstance(alert, str) or not alert.strip():
+            if not isinstance(alert, str):
+                raise TypeError(f"alert name at index {rule_index} must be a string")
+            if not alert.strip():
                 raise ValueError(f"alert name at index {rule_index} must be a non-empty string")
             alert = alert.strip()
             if alert in seen_alerts:
@@ -144,7 +147,7 @@ def load_rules(path: str | Path, step_s: float) -> list[ParsedRule]:
             seen_alerts.add(alert)
             expr_value = raw_rule.get("expr", "")
             if not isinstance(expr_value, str):
-                raise ValueError(f"expression for alert {alert!r} must be a string")
+                raise TypeError(f"expression for alert {alert!r} must be a string")
             expr = expr_value.strip()
             for_s = parse_duration(raw_rule.get("for"))
             keep_s = parse_duration(raw_rule.get("keep_firing_for"))

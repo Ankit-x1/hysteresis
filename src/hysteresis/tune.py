@@ -48,10 +48,17 @@ def tune(
     w_extra: float = 1.0,
     w_delay: float = 1.0,
 ) -> TuneResult:
-    if not isinstance(trials, int) or isinstance(trials, bool) or trials < 0:
+    if not isinstance(trials, int) or isinstance(trials, bool):
+        raise TypeError("trials must be an integer")
+    if trials < 0:
         raise ValueError("trials must be a non-negative integer")
-    if not isinstance(seed, int) or isinstance(seed, bool):
-        raise ValueError("seed must be an integer")
+    if not isinstance(seed, (int, np.integer)) or isinstance(seed, bool):
+        raise TypeError("seed must be an integer")
+    if seed < 0:
+        raise ValueError("seed must be non-negative")
+    seed = int(seed)
+    if not isinstance(allow_band, bool):
+        raise TypeError("allow_band must be a boolean")
     for name, value in (
         ("max_delay_s", max_delay_s),
         ("max_pending_s", max_pending_s),

@@ -7,8 +7,9 @@ that evaluation. This is a discrete benchmark model, not a full PromQL engine.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
+
 import numpy as np
 
 NORMAL, PENDING, FIRING, RECOVERING = 0, 1, 2, 3
@@ -32,17 +33,21 @@ class Rule:
         if not math.isfinite(threshold):
             raise ValueError("threshold must be finite")
         object.__setattr__(self, "threshold", threshold)
+        if not isinstance(self.direction, str):
+            raise TypeError("direction must be a string")
         if self.direction not in ("above", "below"):
             raise ValueError("direction must be 'above' or 'below'")
         for name, value in (
             ("pending_steps", self.pending_steps),
             ("keep_firing_steps", self.keep_firing_steps),
         ):
-            if not isinstance(value, (int, np.integer)) or isinstance(value, bool) or value < 0:
+            if not isinstance(value, (int, np.integer)) or isinstance(value, bool):
+                raise TypeError(f"{name} must be an integer")
+            if value < 0:
                 raise ValueError(f"{name} must be a non-negative integer")
             object.__setattr__(self, name, int(value))
         if not isinstance(self.inclusive, bool):
-            raise ValueError("inclusive must be a boolean")
+            raise TypeError("inclusive must be a boolean")
         if self.clear_threshold is not None:
             try:
                 clear_threshold = float(self.clear_threshold)
