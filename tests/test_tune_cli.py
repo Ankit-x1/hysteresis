@@ -1,6 +1,7 @@
 import dataclasses
 
 import numpy as np
+import pytest
 
 from hysteresis.bench import Bench, Incident, generate
 from hysteresis.cli import main
@@ -19,6 +20,16 @@ def test_tune_is_deterministic():
     first = tune(bench, Rule(75), trials=30, seed=7)
     second = tune(bench, Rule(75), trials=30, seed=7)
     assert first.rule == second.rule and first.loss == second.loss
+
+
+def test_tune_distinguishes_invalid_argument_types_from_values():
+    bench = generate(seed=0, days=1)
+    with pytest.raises(TypeError, match="trials must be an integer"):
+        tune(bench, Rule(75), trials=1.5)
+    with pytest.raises(ValueError, match="trials must be a non-negative integer"):
+        tune(bench, Rule(75), trials=-1)
+    with pytest.raises(TypeError, match="seed must be an integer"):
+        tune(bench, Rule(75), seed="1")
 
 
 def test_band_only_tuned_when_allowed():
@@ -51,7 +62,9 @@ def test_cli_end_to_end(tmp_path, capsys):
         )
         == 0
     )
-    assert "Tuned" in capsys.readouterr().out
+    tune_output = capsys.readouterr().out
+    assert "Tuned" in tune_output
+    assert "Training loss:" in tune_output and " -> " in tune_output
 
 
 def test_check_exit_codes(tmp_path):

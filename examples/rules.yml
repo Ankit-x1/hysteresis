@@ -1,0 +1,10 @@
+# Thresholds use the units of the single cpu_usage series in the benchmark.
+groups:
+  - name: example
+    rules:
+      - alert: HighCPU
+        expr: cpu_usage > 70
+        for: 0s
+      - alert: HighCPUTypical
+        expr: cpu_usage > 70
+        for: 5m

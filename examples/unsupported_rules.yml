@@ -1,0 +1,7 @@
+# Hysteresis intentionally rejects this example in v0.1 rather than guessing.
+groups:
+  - name: unsupported
+    rules:
+      - alert: ComplexExpr
+        expr: rate(errors_total[5m]) / rate(requests_total[5m]) > 0.05 and up == 1
+        for: 5m

@@ -9,7 +9,15 @@ dist/
 build/
 bench/*.json
 harness/.env
-docs
-examples
-conftest.py
-CHANGELOG.md
+promtool-failures/
+# Local environment variants; keep the example template shareable.
+.env.*
+!.env.example
+
+# Python bytecode outside __pycache__.
+*.py[cod]
+
+# Operating-system metadata.
+.DS_Store
+Thumbs.db
+Desktop.ini

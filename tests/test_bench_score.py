@@ -85,6 +85,12 @@ def test_bench_rejects_invalid_values_and_incident_windows():
         Bench(np.arange(10), 15, [Incident(1, 5), Incident(4, 7)])
     with pytest.raises(ValueError, match="metric_name"):
         Bench(np.arange(10), 15, [], metric_name="not a metric")
+    with pytest.raises(TypeError, match="seed must be an integer"):
+        Bench(np.arange(10), 15, [], seed="1")
+    with pytest.raises(TypeError, match="boundaries must be integers"):
+        Bench(np.arange(10), 15, [Incident(1.0, 3)])
+    with pytest.raises(TypeError, match="incident 0 must be an Incident"):
+        Bench(np.arange(10), 15, ["not an incident"])
 
 
 @pytest.mark.parametrize(
@@ -105,6 +111,11 @@ def test_bench_rejects_invalid_values_and_incident_windows():
 def test_generate_rejects_invalid_parameters(kwargs):
     with pytest.raises(ValueError):
         generate(**kwargs)
+
+
+def test_generate_rejects_seed_with_wrong_type():
+    with pytest.raises(TypeError, match="seed must be an integer"):
+        generate(seed="1")
 
 
 def test_split_handles_incident_touching_start_boundary():

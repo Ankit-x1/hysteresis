@@ -24,6 +24,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["docker: requires Docker and the pinned Prometheus image"]
 
 [tool.ruff]
 line-length = 100

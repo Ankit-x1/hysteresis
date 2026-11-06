@@ -1,0 +1,9 @@
+# Generate a matching benchmark with: hysteresis bench --metric-name cpu_idle
+# Thresholds use the units of the single cpu_idle series in that benchmark.
+groups:
+  - name: below
+    rules:
+      - alert: LowHeadroom
+        expr: cpu_idle < 20
+        for: 1m
+        keep_firing_for: 5m

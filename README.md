@@ -16,28 +16,30 @@
 
 Python 3.10+ is required. With [uv](https://docs.astral.sh/uv/):
 
-```bash
+```powershell
 uv sync --extra dev
-uv run hysteresis bench --out bench/default.npz --seed 0 --days 14
-uv run hysteresis score examples/rules.yml --bench bench/default.npz
-uv run hysteresis tune examples/rules.yml --bench bench/default.npz --alert HighCPU
-uv run hysteresis check examples/rules.yml --bench bench/default.npz \
-  --alert HighCPUTypical --max-missed 2 --max-extra-episodes 10
+$bench = Join-Path $env:TEMP "hysteresis-$([guid]::NewGuid().ToString('N')).npz"
+uv run hysteresis bench --out $bench --seed 0 --days 14
+uv run hysteresis score examples\rules.yml --bench $bench
+uv run hysteresis tune examples\rules.yml --bench $bench --alert HighCPU
+uv run hysteresis check examples\rules.yml --bench $bench --alert HighCPUTypical --max-missed 2 --max-extra-episodes 10
 ```
 
 Or with pip:
 
-```bash
+```powershell
 python -m pip install -e ".[dev]"
-hysteresis bench --out bench/default.npz --seed 0 --days 14
-hysteresis score examples/rules.yml --bench bench/default.npz
+$bench = Join-Path $env:TEMP "hysteresis-$([guid]::NewGuid().ToString('N')).npz"
+hysteresis bench --out $bench --seed 0 --days 14
+hysteresis score examples\rules.yml --bench $bench
 ```
 
 The example benchmark contains one metric named `cpu_usage`. `--metric-name` selects the series name stored in a newly generated benchmark:
 
-```bash
-hysteresis bench --out bench/cpu-idle.npz --metric-name cpu_idle --days 7
-hysteresis score examples/rules_below.yml --bench bench/cpu-idle.npz
+```powershell
+$bench = Join-Path $env:TEMP "hysteresis-cpu-idle-$([guid]::NewGuid().ToString('N')).npz"
+uv run hysteresis bench --out $bench --metric-name cpu_idle --days 7
+uv run hysteresis score examples\rules_below.yml --bench $bench
 ```
 
 ## Supported rule contract (v0.1)
@@ -92,43 +94,46 @@ This distinction is important for CI. Hysteresis never silently treats an unsupp
 
 Loss weights can be changed explicitly:
 
-```bash
-hysteresis tune examples/rules.yml --bench bench/default.npz --alert HighCPU \
-  --trials 500 --weight-missed 10 --weight-extra 1 --weight-delay 1 \
-  --max-delay 300 --max-pending 1800 --max-keep 3600
+```powershell
+uv run hysteresis tune examples\rules.yml --bench $bench --alert HighCPU --trials 500 --weight-missed 10 --weight-extra 1 --weight-delay 1 --max-delay 300 --max-pending 1800 --max-keep 3600
 ```
 
 ## Validation
 
-```bash
+```powershell
 uv run pytest -q
 uv run ruff check .
 uv run ruff format --check .
+uv run python -m compileall -q src tests tools harness
+docker version
 uv run python tools/promtool_fidelity.py --trials 200 --docker prom/prometheus:v3.15.1
 ```
 
-The Prometheus fidelity tool generates random state-machine cases and asks `promtool test rules` to validate the simulator's expected states. A fidelity pass is evidence only for the tested semantics and pinned Prometheus version; it does not establish conformance for the full PromQL language or Grafana-managed alerting.
+The Prometheus fidelity tool generates one alert rule and expected alert assertions at every 15-second evaluation point, then runs `promtool test rules`. In Prometheus v3.15.1, a successful command returns exit code 0 and prints only `SUCCESS`; each expected alert assertion is checked by the command, and any mismatch returns nonzero with `FAILED`, `exp`, and `got` details. The harness probes and records the engine version and requires the exact success marker; the `--docker` argument selects the image, so use the pinned image shown above. Arbitrary output containing the word `SUCCESS` is not accepted. Infrastructure failures exit 2, are not counted as agreements or mismatches, and save available trial diagnostics under `promtool-failures/harness-errors/`; semantic mismatches exit 1 and save a reproduction under `promtool-failures/`.
+
+A 200-trial run against `prom/prometheus:v3.15.1` completed with 200 agreements and no mismatches in the audited Windows environment. This is evidence for the sampled narrow semantics only, not the full PromQL language or Grafana-managed alerting. See the [Windows PowerShell fidelity instructions](docs/DEVELOPMENT.md#5-prometheus-fidelity-test).
 
 ## Local Prometheus + Grafana harness
 
 The harness is for manual live comparison, not yet an automated end-to-end fidelity test. It plays one benchmark pass at the benchmark's sample interval and writes wall-clock incident labels.
 
-```bash
-uv sync --extra live
-hysteresis bench --out bench/default.npz --seed 0 --days 0.1
-cp harness/.env.example harness/.env
-# Edit harness/.env and change GRAFANA_ADMIN_PASSWORD.
-python harness/exporter.py --bench bench/default.npz
+```powershell
+uv sync --extra dev --extra live
+$liveBench = Join-Path $env:TEMP "hysteresis-live-$([guid]::NewGuid().ToString('N')).npz"
+uv run hysteresis bench --out $liveBench --seed 0 --days 0.1 --step 15
+if (-not (Test-Path harness\.env)) { Copy-Item harness\.env.example harness\.env }
+notepad harness\.env
+uv run python harness\exporter.py --bench $liveBench
 ```
 
 In another terminal:
 
-```bash
-cd harness
+```powershell
+Set-Location harness
 docker compose up
 ```
 
-Prometheus is available at `http://localhost:9090`; Grafana is at `http://localhost:3000`. Both ports bind to localhost. The exporter runs on the host at port 8000 and plays the entire benchmark in real time (sample count × 15 seconds); start with a short benchmark. The current stack pins Prometheus `v3.15.1` and Grafana OSS `13.0.2` as starting versions; rerun the integration checks before changing them. The bundled Prometheus rule evaluation interval and exporter contract are both 15 seconds, so generate the live benchmark with the default `--step 15`. Docker is not required for the unit-test suite.
+Prometheus is available at `http://localhost:9090`; Grafana is at `http://localhost:3000`. Both ports bind to localhost. The exporter runs on the host at port 8000 and plays the entire benchmark in real time (sample count × 15 seconds); `--days 0.1` therefore takes about 2 hours and 24 minutes to play. The current stack pins Prometheus `v3.15.1` and Grafana OSS `13.0.2` as starting versions; rerun the integration checks before changing them. The bundled Prometheus rule evaluation interval and exporter contract are both 15 seconds. Docker Compose and Grafana are optional and are not required for tests or the `promtool` fidelity check.
 
 ## Repository layout
 
@@ -140,6 +145,13 @@ harness/          one-pass exporter and local Prometheus/Grafana Compose stack
 examples/         supported and deliberately unsupported rule examples
 docs/             architecture, scoring contract and engineering plan
 ```
+
+## Engineering documentation
+
+- [Engineering audit](docs/ENGINEERING_AUDIT.md): current scope, fixes, verification and known gaps.
+- [Development setup](docs/DEVELOPMENT.md): step-by-step Windows PowerShell workflow.
+- [Release checklist](docs/RELEASE_CHECKLIST.md): repeatable pre-release quality gates.
+- [Architecture](docs/ARCHITECTURE.md) and [scoring contract](docs/SCORING.md).
 
 ## Non-goals for v0.1
 

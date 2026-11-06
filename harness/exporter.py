@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 
 from prometheus_client import Gauge, start_http_server
 

@@ -1,8 +1,9 @@
+import itertools
+
 import numpy as np
 import pytest
 
 from hysteresis.sim import FIRING, NORMAL, PENDING, RECOVERING, Rule, episodes, simulate
-import itertools
 
 
 def test_pending_delays_firing():
@@ -57,8 +58,10 @@ def test_invalid_rules_rejected():
         Rule(80, direction="sideways")
     with pytest.raises(ValueError):
         Rule(float("nan"))
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         Rule(80, pending_steps=1.5)
+    with pytest.raises(TypeError):
+        Rule(80, inclusive=1)
 
 
 def test_simulate_rejects_invalid_signal_shape_and_infinity():
@@ -91,8 +94,5 @@ def test_seeded_random_signals_preserve_state_and_episode_invariants():
         assert set(np.unique(states)).issubset(allowed)
         alert_episodes = episodes(states)
         assert all(start < end for start, end in alert_episodes)
-        assert all(
-            left[1] <= right[0]
-            for left, right in itertools.pairwise(alert_episodes, alert_episodes[1:])
-        )
+        assert all(left[1] <= right[0] for left, right in itertools.pairwise(alert_episodes))
         assert all(states[start] == FIRING for start, _ in alert_episodes)

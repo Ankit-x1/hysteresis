@@ -103,10 +103,31 @@ def test_duplicate_alert_names_are_rejected(tmp_path):
 def test_invalid_yaml_root_and_duration_are_reported(tmp_path):
     path = tmp_path / "rules.yml"
     path.write_text("- not a mapping\n")
-    with pytest.raises(ValueError, match="root"):
+    with pytest.raises(TypeError, match="root"):
         load_rules(path, 15)
     path.write_text(
         "groups:\n- name: g\n  rules:\n  - alert: A\n    expr: cpu_usage > 1\n    for: 5 minutes\n"
     )
     with pytest.raises(ValueError, match="bad duration"):
+        load_rules(path, 15)
+
+
+@pytest.mark.parametrize(
+    "content,message",
+    [
+        ("groups: 7\n", "'groups' must be a list"),
+        ("groups:\n- 7\n", "group at index 0"),
+        ("groups:\n- name: g\n  rules: A\n", "rules in group"),
+        ("groups:\n- name: g\n  rules:\n  - 7\n", "rule at index 0"),
+        (
+            "groups:\n- name: g\n  rules:\n  - alert: A\n    expr: 7\n",
+            "expression for alert",
+        ),
+        ("spec: 7\n", "'spec' must be a mapping"),
+    ],
+)
+def test_rule_yaml_wrong_types_raise_type_error(tmp_path, content, message):
+    path = tmp_path / "rules.yml"
+    path.write_text(content)
+    with pytest.raises(TypeError, match=message):
         load_rules(path, 15)
