@@ -7,16 +7,16 @@ are recorded in [ENGINEERING_AUDIT.md](ENGINEERING_AUDIT.md) and
 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). Items below remain future work
 unless explicitly checked; no release or publication action is implied.
 
-## Milestone 0 — Establish a reproducible baseline
+## Milestone 0 — Establish a reproducible baseline (partially complete)
 
-- [ ] Extract the repository and install using Python 3.12.
-- [ ] Run unit tests, Ruff, packaging and the CLI quickstart.
-- [ ] Record dependency and engine versions.
+- [x] Run the test suite locally on Python 3.10, 3.11, 3.12, and 3.14; CI tests Python 3.10.
+- [x] Run unit tests, Ruff, packaging and the CLI quickstart.
+- [x] Record dependency and engine versions.
 - [ ] Verify a clean checkout can reproduce the quickstart.
 
 Done when a clean local environment can build and test the package.
 
-## Milestone 1 — Correctness and fail-closed behavior (current priority)
+## Milestone 1 — Correctness and fail-closed behavior (complete)
 
 - [x] Reject unsupported PromQL expressions instead of guessing.
 - [x] Preserve and verify the expression metric name against the benchmark metric name.
@@ -29,11 +29,11 @@ Done when a clean local environment can build and test the package.
 
 Done when no invalid or partial evaluation can produce a green CI gate.
 
-## Milestone 2 — Simulator fidelity
+## Milestone 2 — Simulator fidelity (partially complete)
 
 - [x] Run `tools/promtool_fidelity.py` against the exact Prometheus image pinned in CI.
 - [ ] Add explicit property-based tests for state invariants and incident windows.
-- [ ] Keep minimal reproductions for every mismatch.
+- [x] Keep minimal reproductions for every mismatch.
 - [x] Verify the fidelity test catches an intentionally wrong expected alert.
 
 Done when the pinned fidelity suite is green and the negative control fails as expected.
